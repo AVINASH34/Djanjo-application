@@ -1,11 +1,26 @@
-FROM python:3.9-slim as build
-RUN mkdir /app
+# Stage 1: Build environment
+FROM python:3.9-slim AS builder
 WORKDIR /app
-COPY . /app
-RUN pip install -r requirements.txt
+COPY requirements.txt .
 
-FROM python:3.9-slim
+# Install dependencies
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# Stage 2: Runtime environment
+FROM python:3.9-slim AS final
 WORKDIR /app
-COPY --from=build /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
+
+# Copy the installed dependencies from the builder stage
+COPY --from=builder /root/.local /root/.local
+
+# Copy application code
+COPY . .
+
+# Add the local bin directory to the PATH
+ENV PATH=/root/.local/bin:$PATH
+
+# Expose port 8000
 EXPOSE 8000
+
+# Command to run the application
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
